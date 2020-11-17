@@ -2,13 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Musketeer.Selenium;
 using OpenQA.Selenium;
 
 
 namespace Musketeer.Selenium
 {
-    public class ProjectActions
+    public abstract class ProjectActions
     {
         private protected Element WaitForElementDisplayed(Element element)
         {
@@ -173,20 +172,18 @@ namespace Musketeer.Selenium
             }
         }
 
-        private protected IList<Element> FindElements(By by)
-        {
-            return Driver.Current.FindElements(by).Select(element => new Element(element, by)).ToList();
-        }
+        private protected IList<Element> FindElements(By by) =>
+            Driver.Current.FindElements(by).Select(element => new Element(element, by)).ToList();
 
-        private protected void WaitUntilElementIsAbsent(By by) =>
+        private protected void WaitForElementAbsent(By by) =>
             Driver.FindAbsentElement(by);
 
-        private protected void WaitUntilElementIsAbsent(By by, int timeout) =>
+        private protected void WaitForElementAbsent(By by, int timeout) =>
             Driver.FindAbsentElements(by, timeout);
-        private protected void WaitUntilElementsAreAbsent(By by) =>
+        private protected void WaitForElementsAbsent(By by) =>
             Driver.FindAbsentElements(by);
         
-        private protected void WaitUntilElementsAreAbsent(By by, int timeout) =>
+        private protected void WaitForElementsAbsent(By by, int timeout) =>
             Driver.FindAbsentElements(by, timeout);
 
         private protected bool ElementHasClass(By by, string className) =>
@@ -222,7 +219,7 @@ namespace Musketeer.Selenium
             }
             else
             {
-                WaitUntilElementIsAbsent(by);
+                WaitForElementAbsent(by);
                 return false;
             }
         }
