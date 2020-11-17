@@ -10,7 +10,7 @@ using RestSharp.Serializers.NewtonsoftJson;
 
 namespace Musketeer.Services
 {
-    public class GenericRestClient
+    public abstract class GenericRestClient
     {
         private string _baseUrl;
         private string _token;
