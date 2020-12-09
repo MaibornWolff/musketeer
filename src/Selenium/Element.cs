@@ -10,9 +10,18 @@ namespace Musketeer.Selenium
     {
 
         private IWebElement _element;
-        public IWebElement Current => _element ?? throw new System.NullReferenceException("Element is null");
+        public IWebElement Current => _element ?? throw new NullReferenceException("Element is null");
 
-        public By By { get; private set; }
+        public By By { get; }
+
+        private readonly int _index = -1;
+
+        public Element(IWebElement element, By by, int index)
+        {
+            _element = element;
+            By = by;
+            _index = index;
+        }
 
         public Element(IWebElement element, By by)
         {
@@ -22,8 +31,29 @@ namespace Musketeer.Selenium
 
         public Element(By by)
         {
-            _element = Driver.Current.FindElement(by);
+            try
+            {
+                _element = Driver.Current.FindElement(by);
+            }
+            catch(InvalidSelectorException)
+            {
+                throw new Exception($"{by} is not a valid selector");
+            }
             By = by;
+        }
+
+        public void ReloadElement()
+        {
+            if(_index == -1)
+            {
+                _element = Driver.Current.FindElement(By);
+            }
+            else
+            {
+                var elements = Driver.Current.FindElements(By);
+                if(elements.Count < _index) throw new Exception($"Reloaded element list does not contain index {_index}");
+                _element = elements[_index];
+            }
         }
 
         public string Locator()
@@ -60,15 +90,11 @@ namespace Musketeer.Selenium
             StaleSave(actions.DoubleClick(Current).Perform);
         }
 
-        public IWebElement FindElement(By by)
-        {
-            return Current.FindElement(by);
-        }
+        public IWebElement FindElement(By by) =>
+            StaleSave(Current.FindElement, by);
 
-        public ReadOnlyCollection<IWebElement> FindElements(By by)
-        {
-            return Current.FindElements(by);
-        }
+        public ReadOnlyCollection<IWebElement> FindElements(By by) =>
+            StaleSave(Current.FindElements, by);
 
         public string GetAttribute(string attributeName) =>
             StaleSave(Current.GetAttribute, attributeName);
@@ -150,18 +176,35 @@ namespace Musketeer.Selenium
             }
         }
 
-        private TResult StaleSave<T, TResult>(Func<T, TResult> func, T parameter)
+        private TResult StaleSave<T, TResult>(Func<T, TResult> func, T parameter, int numberOfRetries = 10)
         {
-            try
+            if(numberOfRetries < 1) throw new Exception("Retries for stale elements needs to be at least 1");
+            var currentRetry = 1;
+            while(currentRetry <= numberOfRetries)
             {
-                return func(parameter);
+                try
+                {
+                    return (TResult)Convert.ChangeType(typeof(IWebElement).GetMethod(func.Method.Name)?.Invoke(_element, new object[] {parameter}), typeof(TResult));
+                }
+                catch(Exception e)
+                {
+                    var message = $"Stale element '{Locator()}";
+                    if(_index > -1) message += $" - index {_index}";
+                    message += $"' - retry {currentRetry}";
+                    Console.WriteLine(message);
+                    Driver.Sleep(500);
+                    ReloadElement();
+                }
+                currentRetry++;
             }
-            catch (StaleElementReferenceException)
-            {
-                Driver.Sleep(1000);
-                _element = FindElement(By);
-                return func(parameter);
-            }
+            throw new StaleElementReferenceException($"Element '{Locator()}' never became unstale");
+        }
+
+        public bool IsFullyDisplayedOnScreen()
+        {
+            var isVerticallyOnScreen = Driver.Size.Width - Current.Location.X >= Current.Size.Width;
+            var isHorizontallyOnScreen = Driver.Size.Height - Current.Location.Y >= Current.Size.Height;
+            return isVerticallyOnScreen && isHorizontallyOnScreen;
         }
     }
 }

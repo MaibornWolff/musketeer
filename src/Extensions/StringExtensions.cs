@@ -45,5 +45,17 @@ namespace Musketeer.Extensions
 
         public static string AddRandomString(this string text, int length, string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789") =>
             text + new string(Enumerable.Range(1, length).Select(_ => chars[new Random().Next(chars.Length)]).ToArray());
+        
+        public static int ToInt(this string text)
+        {
+            try
+            {
+                return Int32.Parse(text); 
+            }
+            catch (Exception e)
+            { 
+                throw new Exception($"Cannot parse text '{text}' to int");
+            }
+        }
     }
 }

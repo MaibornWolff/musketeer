@@ -18,13 +18,13 @@ namespace Musketeer.Selenium
             return options;
         }
 
-        public static IWebDriver Build(Browser browser, string remoteWebDriver)
+        public static IWebDriver Build(Browser browser, string remoteWebDriver, bool useHeadlessBrowser)
         {
             if (string.IsNullOrEmpty(remoteWebDriver))
             {
                 return browser switch
                 {
-                    Browser.CHROME => new ChromeDriver(),
+                    Browser.CHROME => CreateChromeDriver(useHeadlessBrowser),
                     Browser.FIREFOX => new FirefoxDriver(),
                     Browser.INTERNET_EXPORER => new InternetExplorerDriver(),
                     Browser.EDGE => new EdgeDriver(GetEdgeOptions()),
@@ -35,7 +35,7 @@ namespace Musketeer.Selenium
             {
                 DriverOptions options = browser switch
                 {
-                    Browser.CHROME => new ChromeOptions(),
+                    Browser.CHROME => CreateChromeOptions(useHeadlessBrowser),
                     Browser.FIREFOX => new FirefoxOptions(),
                     Browser.INTERNET_EXPORER => new InternetExplorerOptions(),
                     Browser.EDGE => GetEdgeOptions(),
@@ -45,5 +45,20 @@ namespace Musketeer.Selenium
             }
         }
 
+        public static ChromeOptions CreateChromeOptions(bool useHeadlessBrowser)
+        {
+            // NOTE: This is needed to Run Test in Azure Pipeline using Linux
+            // Source: https://forum.katalon.com/t/unable-to-execute-testcases-over-linux/18995
+            ChromeOptions co = new ChromeOptions();
+            if(useHeadlessBrowser) co.AddArguments("--headless");
+            co.AddArguments("--no-sandbox");
+            co.AddArguments("--disable-dev-shm-usage");
+            return co;
+        }
+
+        public static ChromeDriver CreateChromeDriver(bool useHeadlessBrowser)
+        {
+            return new ChromeDriver(CreateChromeOptions(useHeadlessBrowser));
+        }
     }
 }

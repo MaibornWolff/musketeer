@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Drawing;
 using System.Threading;
 using Musketeer.Config;
 using Musketeer.Extensions;
@@ -31,14 +32,17 @@ namespace Musketeer.Selenium
 
         public static string Title => Current.Title;
 
+        public static int CurrentTimeout { get; private set; }
+
         public static void Init(IConfiguration config)
         {
             _config = config;
-            _driver = DriverFactory.Build(config.Browser, config.RemoteWebDriver);
-            ResetImplicitTimeout();
+            _driver = DriverFactory.Build(config.Browser, config.RemoteWebDriver, config.UseHeadlessBrowser);
             Wait = new Wait(config.TimeOut);
+            SetImplicitTimeout(config.TimeOut);
             SessionStorage = new SessionStorage();
             LocalStorage = new LocalStorage();
+            CurrentTimeout = _config.TimeOut;
             _baseUrl = config.Url;
         }
 
@@ -58,14 +62,23 @@ namespace Musketeer.Selenium
             Current.Navigate().GoToUrl(url);
         }
 
-        public static void SetImplicitTimeout(int timeOutInSeconds) =>
+        public static void SetImplicitTimeout(int timeOutInSeconds)
+        {
             Current.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(timeOutInSeconds);
+            CurrentTimeout = timeOutInSeconds;
+        }
 
-        public static void SetImplicitTimeout(TimeSpan timeSpan) =>
+        public static void SetImplicitTimeout(TimeSpan timeSpan)
+        {
             Current.Manage().Timeouts().ImplicitWait = timeSpan;
+            CurrentTimeout = timeSpan.Seconds;
+        }
 
-        public static void ResetImplicitTimeout() =>
+        public static void ResetImplicitTimeout()
+        {
             Current.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(_config.TimeOut);
+            CurrentTimeout = _config.TimeOut;
+        }
 
         public static string ExecuteJs(string command, object parameter)
         {
@@ -103,6 +116,13 @@ namespace Musketeer.Selenium
 
         public static void Maximize() =>
             Current.Manage().Window.Maximize();
+
+        public static Size Size =>
+            new Size
+            {
+                Width = ExecuteJs("return document.documentElement.clientWidth").ToInt(),
+                Height = ExecuteJs("return document.documentElement.clientHeight").ToInt() 
+            };
 
         public static void RefreshPage() =>
             Current.Navigate().Refresh();

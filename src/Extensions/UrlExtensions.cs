@@ -4,30 +4,35 @@ namespace Musketeer.Extensions
 {
     public static class UrlExtensions
     {
-        public static string UrlAppend(this String url, string path)
+        public static string UrlAppend(this string url, string path)
         {
             if (url == "") return path;
             if (path == "") return url;
 
-            if (url[url.Length - 1] == '/' && path[0] == '/')
+            if (url[^1] == '/' && path[0] == '/')
             {
                 return url + path.Remove(0, 1);
             }
-            else if (url[url.Length - 1] != '/' && path[0] != '/')
+
+            if (url[^1] != '/' && path[0] != '/')
             {
                 return url + '/' + path;
             }
-            else
-            {
-                return url + path;
-            }
+
+            return url + path;
         }
 
-        public static string UrlAppendPort(this String url, int port)
+        public static string UrlAppendPort(this string url, int port)
         {
-            return (url[url.Length - 1] == '/') ?
-                url.Remove(url.Length - 1, 1) + ':' + port :
-                url + ':' + port;
+            return url[^1] == '/' ? url.Remove(url.Length - 1, 1) + ':' + port : url + ':' + port;
+        }
+
+        public static string UrlAppendParameter(this string url, string key, string value)
+        {
+            if (url == null) throw new ArgumentNullException(nameof(url));
+            if (url.Contains("?"))
+                return $"{url}&{key}={value}";
+            return $"{url}?{key}={value}";
         }
     }
 }
