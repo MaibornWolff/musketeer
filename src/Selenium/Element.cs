@@ -28,7 +28,28 @@ namespace Musketeer.Selenium
             _element = element;
             By = by;
         }
+        
+        public Element(IWebElement element, string locator)
+        {
+            _element = element;
+            By = GetByFromLocator(locator);
+        }
 
+        public Element(string locator)
+        {
+            By = GetByFromLocator(locator);
+            try
+            {
+                _element = Driver.Current.FindElement(By);
+            }
+            catch(InvalidSelectorException)
+            {
+                throw new Exception($"{locator} is not a valid selector");
+            }
+        }
+
+        
+        
         public Element(By by)
         {
             try
@@ -42,6 +63,14 @@ namespace Musketeer.Selenium
             By = by;
         }
 
+        private By GetByFromLocator(string locator)
+        {
+            if (locator.StartsWith("//") || locator.StartsWith(".."))
+                return By.XPath(locator);
+
+            return By.CssSelector(locator);
+        }
+        
         public void ReloadElement()
         {
             if(_index == -1)
@@ -90,11 +119,47 @@ namespace Musketeer.Selenium
             StaleSave(actions.DoubleClick(Current).Perform);
         }
 
-        public IWebElement FindElement(By by) =>
-            StaleSave(Current.FindElement, by);
+        // Invoke method in stale save does not work with findElement
+        public IWebElement FindElement(By by)
+        {
+            var retry = 1;
+            while (retry <= 10)
+            {
+                try
+                {
+                    return Current.FindElement(by);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Stale element [{Locator()}] - retry {retry}");
+                    ReloadElement();
+                }
 
-        public ReadOnlyCollection<IWebElement> FindElements(By by) =>
-            StaleSave(Current.FindElements, by);
+                retry++;
+            }
+            throw new StaleElementReferenceException($"Element '{Locator()}' never became unstale"); 
+        }
+
+        // Invoke method in stale save does not work with findElements
+        public ReadOnlyCollection<IWebElement> FindElements(By by)
+        {
+            var retry = 1;
+            while (retry <= 10)
+            {
+                try
+                {
+                    return Current.FindElements(by);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Stale element [{Locator()}] - retry {retry}");
+                    ReloadElement();
+                }
+
+                retry++;
+            }
+            throw new StaleElementReferenceException($"Element '{Locator()}' never became unstale"); 
+        }
 
         public string GetAttribute(string attributeName) =>
             StaleSave(Current.GetAttribute, attributeName);
@@ -160,7 +225,7 @@ namespace Musketeer.Selenium
                 _element = FindElement(By);
                 action(parameter);
             }
-       }
+        }
 
         private void StaleSave(Action action)
         {
