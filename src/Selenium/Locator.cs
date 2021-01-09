@@ -7,6 +7,7 @@ namespace Musketeer.Selenium
 
     public enum LocatorType
     {
-        Button
+        Button,
+        Link
     }
 }
